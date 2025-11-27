@@ -4,6 +4,7 @@ import requests
 import time
 import csv
 import os
+import pandas as pd
 
 st.title("Temperature Monitor with CSV Logging")
 
@@ -15,8 +16,9 @@ placeholder_temp = st.empty()
 
 CSV_FILE = "data_log.csv"
 
+
 # ----------------------------
-# CREATE CSV IF NOT EXIST
+# CREATE CSV IF NOT EXISTS
 # ----------------------------
 if not os.path.exists(CSV_FILE):
     with open(CSV_FILE, "w", newline="") as file:
@@ -25,11 +27,31 @@ if not os.path.exists(CSV_FILE):
 
 
 # ----------------------------
-#  LOOP TO READ AND APPEND DATA
+# STREAMLIT DOWNLOAD BUTTON
+# ----------------------------
+st.subheader("Download Logged Data")
+
+def show_download_button():
+    if os.path.exists(CSV_FILE):
+        df = pd.read_csv(CSV_FILE)
+        st.download_button(
+            label="Download CSV File",
+            data=df.to_csv(index=False),
+            file_name="data_log.csv",
+            mime="text/csv"
+        )
+
+show_download_button()
+st.write("---")
+
+
+# ----------------------------
+# MAIN LOOP: FETCH + LOG DATA
 # ----------------------------
 while True:
     try:
         response = requests.get(API_URL)
+
         if response.status_code == 200:
             data = response.json()
 
@@ -37,11 +59,11 @@ while True:
             temp = data.get("temperature")
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
-            # Show in UI
+            # 1. Show in UI
             placeholder_id.subheader(f"ID: {_id}")
             placeholder_temp.text(f"Temperature: {temp} °C")
 
-            # Append into CSV
+            # 2. Append to CSV
             with open(CSV_FILE, "a", newline="") as file:
                 writer = csv.writer(file)
                 writer.writerow([_id, temp, timestamp])
